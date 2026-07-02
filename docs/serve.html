@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Módosítható Pingpong Szimuláció</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        
+        /* Beállítások Panel */
+        .settings-panel {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 25px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #4a5568;
+        }
+        .form-group input {
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 15px;
+        }
+
+        .btn-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .strategy-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            border-top: 5px solid #2ecc71;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        .strategy-card.gyoztes {
+            border-top: 5px solid #e74c3c;
+        }
+        .strategy-card h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        .stats {
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .chart-container {
+            margin-top: 35px;
+            position: relative;
+            height: 450px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Módosított Pingpong Szimuláció</h1>
+    <p style="text-align: center; font-style: italic; color: #7f8c8d; margin-bottom: 25px;">
+        Állítsd be a paramétereket, majd kattints a szimuláció indítására!
+    </p>
+
+    <div class="settings-panel">
+        <div class="form-group">
+            <label for="simCount">Szimulációk száma:</label>
+            <input type="number" id="simCount" value="1000" min="1" max="100000">
+        </div>
+        <div class="form-group">
+            <label for="limit">Győzelemhez szükséges pont:</label>
+            <input type="number" id="limit" value="11" min="1" max="100">
+        </div>
+        <div class="form-group">
+            <label for="probA">P(A nyer saját szervából):</label>
+            <input type="number" id="probA" value="0.7" step="0.05" min="0" max="1">
+        </div>
+        <div class="form-group">
+            <label for="probB">P(B nyer saját szervából):</label>
+            <input type="number" id="probB" value="0.6" step="0.05" min="0" max="1">
+        </div>
+    </div>
+
+    <div class="btn-container">
+        <button onclick="runSimulation()">Szimuláció Indítása</button>
+    </div>
+
+    <div class="results-grid" id="results" style="display: none;">
+        <div class="strategy-card">
+            <h3>Kétváltós szerva (Klasszikus)</h3>
+            <div class="stats" id="stats-valtot"></div>
+        </div>
+        <div class="strategy-card gyoztes">
+            <h3>Győztes szervál stratégia</h3>
+            <div class="stats" id="stats-gyoztes"></div>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="distributionChart"></canvas>
+    </div>
+</div>
+
+<script>
+let myChart = null;
+
+function runSimulation() {
+    // Értékek beolvasása az input mezőkből
+    const SIMULATIONS = parseInt(document.getElementById('simCount').value) || 1000;
+    const limit = parseInt(document.getElementById('limit').value) || 11;
+    const pA = parseFloat(document.getElementById('probA').value);
+    const pB = parseFloat(document.getElementById('probB').value);
+
+    // Validáció
+    if (pA < 0 || pA > 1 || pB < 0 || pB > 1) {
+        alert("A valószínűségeknek 0 és 1 közé kell esniük!");
+        return;
+    }
+    if (SIMULATIONS <= 0) {
+        alert("A szimulációk számának legalább 1-nek kell lennie!");
+        return;
+    }
+    if (limit <= 0) {
+        alert("A győzelemhez szükséges pontok számának legalább 1-nek kell lennie!");
+        return;
+    }
+
+    let valtotScores = {};
+    let gyoztesScores = {};
+
+    let valtotWinsA = 0, valtotWinsB = 0;
+    let gyoztesWinsA = 0, gyoztesWinsB = 0;
+    
+    let valtotTotalPoints = 0;
+    let gyoztesTotalPoints = 0;
+
+    for (let i = 0; i < SIMULATIONS; i++) {
+        // 1. VÁLTOTT SZERVA
+        let scoreA = 0, scoreB = 0;
+        let totalServes = 0;
+        while (scoreA < limit && scoreB < limit) {
+            let server = (totalServes % 2 === 0) ? 'A' : 'B';
+            let r = Math.random();
+            if (server === 'A') {
+                if (r < pA) scoreA++; else scoreB++;
+            } else {
+                if (r < pB) scoreB++; else scoreA++;
+            }
+            totalServes++;
+        }
+        if (scoreA === limit) valtotWinsA++; else valtotWinsB++;
+        valtotTotalPoints += (scoreA + scoreB);
+        let keyValtot = `${scoreA}-${scoreB}`;
+        valtotScores[keyValtot] = (valtotScores[keyValtot] || 0) + 1;
+
+        // 2. GYŐZTES SZERVÁL
+        let scoreA_gy = 0, scoreB_gy = 0;
+        let currentServer = 'A'; 
+        while (scoreA_gy < limit && scoreB_gy < limit) {
+            let r = Math.random();
+            if (currentServer === 'A') {
+                if (r < pA) {
+                    scoreA_gy++;
+                    currentServer = 'A';
+                } else {
+                    scoreB_gy++;
+                    currentServer = 'B';
+                }
+            } else {
+                if (r < pB) {
+                    scoreB_gy++;
+                    currentServer = 'B';
+                } else {
+                    scoreA_gy++;
+                    currentServer = 'A';
+                }
+            }
+        }
+        if (scoreA_gy === limit) gyoztesWinsA++; else gyoztesWinsB++;
+        gyoztesTotalPoints += (scoreA_gy + scoreB_gy);
+        let keyGyoztes = `${scoreA_gy}-${scoreB_gy}`;
+        gyoztesScores[keyGyoztes] = (gyoztesScores[keyGyoztes] || 0) + 1;
+    }
+
+    // Szöveges eredmények frissítése
+    document.getElementById('results').style.display = 'grid';
+    
+    document.getElementById('stats-valtot').innerHTML = `
+        <p><strong>A játékos nyert:</strong> ${valtotWinsA} alkalommal (${((valtotWinsA/SIMULATIONS)*100).toFixed(1)}%)</p>
+        <p><strong>B játékos nyert:</strong> ${valtotWinsB} alkalommal (${((valtotWinsB/SIMULATIONS)*100).toFixed(1)}%)</p>
+        <p><strong>Átlagos labdamenet / meccs:</strong> ${(valtotTotalPoints/SIMULATIONS).toFixed(1)}</p>
+    `;
+
+    document.getElementById('stats-gyoztes').innerHTML = `
+        <p><strong>A játékos nyert:</strong> ${gyoztesWinsA} alkalommal (${((gyoztesWinsA/SIMULATIONS)*100).toFixed(1)}%)</p>
+        <p><strong>B játékos nyert:</strong> ${gyoztesWinsB} alkalommal (${((gyoztesWinsB/SIMULATIONS)*100).toFixed(1)}%)</p>
+        <p><strong>Átlagos labdamenet / meccs:</strong> ${(gyoztesTotalPoints/SIMULATIONS).toFixed(1)}</p>
+    `;
+
+    // Grafikon frissítése
+    displayChart(valtotScores, gyoztesScores);
+    //console.log(valtotScores);
+}
+
+function displayChart(valtot, gyoztes) {
+    let allKeys = new Set([...Object.keys(valtot), ...Object.keys(gyoztes)]);
+    let sortedKeys = Array.from(allKeys).sort((a, b) => {
+        let partsA = a.split('-').map(Number);
+        let partsB = b.split('-').map(Number);
+        return (partsA[0] - partsB[0]) || (partsA[1] - partsB[1]);
+    });
+
+    let dataValtot = sortedKeys.map(k => valtot[k] || 0);
+    let dataGyoztes = sortedKeys.map(k => gyoztes[k] || 0);
+
+    if (myChart) {
+        myChart.destroy();
+    }
+
+    const ctx = document.getElementById('distributionChart').getContext('2d');
+    myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: sortedKeys,
+            datasets: [
+                {
+                    label: 'Váltott szerva',
+                    data: dataValtot,
+                    backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                    borderColor: 'rgba(52, 152, 219, 1)',
+                    borderWidth: 1
+                },
+                {
+                    label: 'Győztes szervál',
+                    data: dataGyoztes,
+                    backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                    borderColor: 'rgba(231, 76, 60, 1)',
+                    borderWidth: 1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Meccsek száma' }
+                },
+                x: {
+                    title: { display: true, text: 'Végeredmény (A - B)' }
+                }
+            },
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Meccsek végeredményének pontos eloszlása'
+                }
+            }
+        }
+    });
+}
+</script>
+
+</body>
+</html>
