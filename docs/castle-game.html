@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<title>Lovagi Torna Pontozó</title>
+<style>
+  :root{
+    --parchment:#f3e9d2;
+    --parchment-dark:#e6d6ad;
+    --ink:#3b2f1f;
+    --wine:#7a2222;
+    --gold:#b8860b;
+    --steel:#445566;
+    --green:#3d5a3d;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Georgia','Times New Roman',serif;
+    background:
+      radial-gradient(circle at 20% 10%, rgba(184,134,11,0.08), transparent 40%),
+      var(--parchment);
+    color:var(--ink);
+    padding:32px 20px 80px;
+  }
+  h1{
+    text-align:center;
+    font-size:2.2em;
+    letter-spacing:1px;
+    margin:0 0 4px;
+    color:var(--wine);
+    text-shadow:1px 1px 0 rgba(0,0,0,0.05);
+  }
+  .subtitle{
+    text-align:center;
+    color:var(--steel);
+    margin-bottom:36px;
+    font-style:italic;
+  }
+  .panel{
+    max-width:1100px;
+    margin:0 auto 28px;
+    background:var(--parchment-dark);
+    border:1px solid #c9b27c;
+    border-radius:6px;
+    padding:20px 24px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  }
+  .panel h2{
+    margin-top:0;
+    font-size:1.25em;
+    color:var(--wine);
+    border-bottom:2px solid var(--gold);
+    padding-bottom:6px;
+  }
+  table{
+    border-collapse:collapse;
+    width:100%;
+  }
+  th,td{
+    border:1px solid #c9b27c;
+    padding:8px 10px;
+    text-align:center;
+  }
+  th{
+    background:#dcc78f;
+    color:var(--ink);
+    font-weight:600;
+  }
+  input[type=number]{
+    width:56px;
+    padding:4px;
+    border:1px solid #b89a5e;
+    border-radius:4px;
+    background:#fffdf5;
+    text-align:center;
+    font-family:inherit;
+  }
+  input[type=text]{
+    width:140px;
+    padding:5px 8px;
+    border:1px solid #b89a5e;
+    border-radius:4px;
+    background:#fffdf5;
+    font-family:inherit;
+  }
+  .venue-name-input{width:110px;}
+  .team-row td{position:relative;}
+  .sum-badge{
+    display:inline-block;
+    margin-left:8px;
+    padding:2px 8px;
+    border-radius:10px;
+    font-size:0.85em;
+    font-weight:bold;
+  }
+  .sum-ok{background:#d6e9d6;color:var(--green);}
+  .sum-bad{background:#f0d0d0;color:var(--wine);}
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:5px;
+    padding:8px 16px;
+    font-size:0.95em;
+    font-weight:600;
+  }
+  .btn-add{background:var(--steel);color:#fff;margin-top:10px;}
+  .btn-remove{background:var(--wine);color:#fff;padding:4px 10px;font-size:0.8em;}
+  .btn-calc{
+    display:block;
+    margin:0 auto 28px;
+    background:var(--wine);
+    color:#fff;
+    font-size:1.15em;
+    padding:12px 36px;
+    border-radius:8px;
+    box-shadow:0 3px 0 #4f1414;
+  }
+  .btn-calc:active{transform:translateY(2px);box-shadow:0 1px 0 #4f1414;}
+  #results .panel{margin-bottom:28px;}
+  .total-cell{font-weight:bold;background:#f0e2b8;}
+  .winner-row td{background:#e6f0e0;}
+  .vlabel{font-weight:bold;color:var(--wine);}
+  .round-tabs{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:18px;
+    max-width:1100px;
+    margin-left:auto;
+    margin-right:auto;
+  }
+  .round-tab{
+    background:#dcc78f;
+    color:var(--ink);
+    padding:7px 16px;
+    border-radius:20px;
+    font-size:0.9em;
+    border:2px solid transparent;
+    cursor:pointer;
+  }
+  .round-tab.active{
+    background:var(--wine);
+    color:#fff;
+  }
+  .btn-newround{
+    display:block;
+    margin:0 auto 28px;
+    background:var(--green);
+    color:#fff;
+    font-size:1.05em;
+    padding:10px 28px;
+    border-radius:8px;
+    box-shadow:0 3px 0 #233823;
+  }
+  .btn-newround:active{transform:translateY(2px);box-shadow:0 1px 0 #233823;}
+  .cumulative-badge{
+    font-size:0.78em;
+    color:var(--steel);
+    font-weight:normal;
+  }
+  footer{
+    text-align:center;
+    color:var(--steel);
+    font-size:0.8em;
+    margin-top:40px;
+  }
+</style>
+</head>
+<body>
+
+<h1>⚔ Lovagi Torna Pontozó ⚔</h1>
+<div class="subtitle">5 helyszín &middot; 5 lovag csapatonként &middot; 11 elosztható erőpont</div>
+
+<div class="panel">
+  <h2>Helyszínek és pontozás</h2>
+  <table id="venueTable">
+    <thead>
+      <tr>
+        <th>Helyszín neve</th>
+        <th>Győzelem pontja</th>
+        <th>Döntetlen pontja</th>
+        <th>Vereség pontja</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <div style="margin-top:10px;font-size:0.85em;color:var(--steel);">
+    A pontozás helyszínenként eltérő lehet — minden mérkőzés (párviadal) után mindkét fél megkapja a neki járó pontot (győztes/döntetlen/vesztes) az adott helyszín szabálya szerint.
+  </div>
+</div>
+
+<div class="panel">
+  <h2>Csapatok és lovagok erőssége</h2>
+  <table id="teamTable">
+    <thead>
+      <tr id="teamHeaderRow">
+        <th>Csapat neve</th>
+      </tr>
+    </thead>
+    <tbody id="teamBody"></tbody>
+  </table>
+  <button class="btn-add" onclick="addTeam()">+ Csapat hozzáadása</button>
+</div>
+
+<button class="btn-calc" id="calcBtn" onclick="calculate()">Forduló pontjainak kiszámítása</button>
+
+<div id="roundTabsContainer"></div>
+
+<div id="results"></div>
+
+<div id="cumulativePanel"></div>
+
+<footer>Minden lovag más-más helyszínre megy; az erősségek összegének csapatonként 11-nek kell lennie.</footer>
+
+<script>
+const VENUE_COUNT = 5;
+let teams = [];
+let teamIdCounter = 0;
+
+let rounds = [];          // lezárt fordulók: {number, venues, totals: {name: pts}}
+let currentRoundClosed = false; // az aktuálisan szerkesztett forduló ki van-e már számolva
+let viewingRoundIndex = null;   // ha nem null, egy korábbi fordulót nézünk (results panelben)
+
+function defaultVenues(){
+  const data = [
+    ["Albrechtsburg", 5, 2, 0],
+    ["Carcassonne", 4, 3, 0],
+    ["Karlstejn", 4, 0, 0],
+    ["Szepesvár", 3, 2, 0],
+    ["Bodiam Castle", 2, 1, 0]
+  ];
+  return data.map(([name, win, draw, loss]) => ({name, win, draw, loss}));
+}
+let venues = defaultVenues();
+
+function renderVenueTable(){
+  const tbody = document.querySelector('#venueTable tbody');
+  tbody.innerHTML = '';
+  venues.forEach((v, i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" class="venue-name-input" value="${v.name}" onchange="venues[${i}].name=this.value; renderTeamHeader();"></td>
+      <td><input type="number" value="${v.win}" onchange="venues[${i}].win=parseInt(this.value)||0;"></td>
+      <td><input type="number" value="${v.draw}" onchange="venues[${i}].draw=parseInt(this.value)||0;"></td>
+      <td><input type="number" value="${v.loss}" onchange="venues[${i}].loss=parseInt(this.value)||0;"></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTeamHeader(){
+  const row = document.getElementById('teamHeaderRow');
+  row.innerHTML = '<th>Csapat neve</th>';
+  venues.forEach(v=>{
+    const th = document.createElement('th');
+    th.textContent = v.name;
+    row.appendChild(th);
+  });
+  const thSum = document.createElement('th');
+  thSum.textContent = 'Összeg';
+  row.appendChild(thSum);
+  const thAction = document.createElement('th');
+  thAction.textContent = '';
+  row.appendChild(thAction);
+}
+
+function addTeam(){
+  teamIdCounter++;
+  teams.push({
+    id: teamIdCounter,
+    name: `Csapat ${teams.length+1}`,
+    strengths: Array(VENUE_COUNT).fill(0)
+  });
+  renderTeamTable();
+}
+
+function removeTeam(id){
+  teams = teams.filter(t=>t.id!==id);
+  renderTeamTable();
+}
+
+function renderTeamTable(){
+  const body = document.getElementById('teamBody');
+  body.innerHTML = '';
+  teams.forEach(team=>{
+    const tr = document.createElement('tr');
+    tr.className = 'team-row';
+    let cells = `<td><input type="text" value="${team.name}" onchange="setTeamName(${team.id}, this.value)"></td>`;
+    for(let i=0;i<VENUE_COUNT;i++){
+      cells += `<td><input type="number" min="0" value="${team.strengths[i]}" onchange="setStrength(${team.id}, ${i}, this.value)"></td>`;
+    }
+    cells += `<td><span id="sum-${team.id}"></span></td>`;
+    cells += `<td><button class="btn-remove" onclick="removeTeam(${team.id})">✕</button></td>`;
+    tr.innerHTML = cells;
+    body.appendChild(tr);
+  });
+  updateSums();
+}
+
+function setTeamName(id, val){
+  const t = teams.find(t=>t.id===id);
+  if(t) t.name = val;
+}
+
+function setStrength(id, idx, val){
+  const t = teams.find(t=>t.id===id);
+  if(t){
+    let n = parseInt(val);
+    if(isNaN(n) || n<0) n = 0;
+    t.strengths[idx] = n;
+  }
+  updateSums();
+}
+
+function updateSums(){
+  teams.forEach(t=>{
+    const sum = t.strengths.reduce((a,b)=>a+b,0);
+    const el = document.getElementById('sum-'+t.id);
+    if(el){
+      el.textContent = sum;
+      el.className = 'sum-badge ' + (sum===11 ? 'sum-ok' : 'sum-bad');
+    }
+  });
+}
+
+function computeRoundTotals(){
+  const totals = {};
+  teams.forEach(t => totals[t.id] = 0);
+  for(let v=0; v<VENUE_COUNT; v++){
+    const venue = venues[v];
+    for(let i=0;i<teams.length;i++){
+      for(let j=i+1;j<teams.length;j++){
+        const ti = teams[i], tj = teams[j];
+        const si = ti.strengths[v], sj = tj.strengths[v];
+        let pi, pj;
+        if(si > sj){ pi = venue.win; pj = venue.loss; }
+        else if(sj > si){ pi = venue.loss; pj = venue.win; }
+        else { pi = venue.draw; pj = venue.draw; }
+        totals[ti.id] += pi;
+        totals[tj.id] += pj;
+      }
+    }
+  }
+  return totals;
+}
+
+function pointsAtVenue(team, v){
+  let pts = 0;
+  const venue = venues[v];
+  for(let other of teams){
+    if(other.id === team.id) continue;
+    const si = team.strengths[v], sj = other.strengths[v];
+    if(si > sj) pts += venue.win;
+    else if(si < sj) pts += venue.loss;
+    else pts += venue.draw;
+  }
+  return pts;
+}
+
+function renderRoundResultTable(venuesSnapshot, teamsSnapshot, totals, titleSuffix){
+  const sorted = teamsSnapshot;
+  const maxScore = sorted.length ? Math.max(...sorted.map(t=>totals[t.id])) : 0;
+
+  let html = `<div class="panel"><h2>Eredmény ${titleSuffix}</h2><table><thead><tr><th>Helyezés</th><th>Csapat</th>`;
+  venuesSnapshot.forEach(v=> html += `<th>${v.name}</th>`);
+  html += '<th>Forduló pontszáma</th></tr></thead><tbody>';
+
+  sorted.forEach((t, idx)=>{
+    const isWinner = totals[t.id] === maxScore;
+    html += `<tr class="${isWinner ? 'winner-row' : ''}"><td>${idx+1}.</td><td>${t.name}</td>`;
+    for(let v=0; v<venuesSnapshot.length; v++){
+      let pts = 0;
+      const venue = venuesSnapshot[v];
+      for(let other of teamsSnapshot){
+        if(other.id === t.id) continue;
+        const si = t.strengths[v], sj = other.strengths[v];
+        if(si > sj) pts += venue.win;
+        else if(si < sj) pts += venue.loss;
+        else pts += venue.draw;
+      }
+      html += `<td>${pts}</td>`;
+    }
+    html += `<td class="total-cell">${totals[t.id]}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  return html;
+}
+
+function calculate(){
+  const invalid = teams.filter(t => t.strengths.reduce((a,b)=>a+b,0) !== 11);
+  const resultsDiv = document.getElementById('results');
+  if(teams.length === 0){
+    resultsDiv.innerHTML = '<div class="panel"><em>Adj hozzá legalább egy csapatot!</em></div>';
+    return;
+  }
+  if(invalid.length > 0){
+    resultsDiv.innerHTML = `<div class="panel"><strong style="color:var(--wine)">Hiba:</strong> a következő csapatok erősségeinek összege nem 11: ${invalid.map(t=>t.name).join(', ')}. Javítsd a táblázatban!</div>`;
+    return;
+  }
+
+  const totals = computeRoundTotals();
+  const roundNumber = rounds.length + 1;
+
+  // mentés a fordulók közé (név alapján, hogy a cumulative táblázat is működjön)
+  const totalsByName = {};
+  teams.forEach(t => totalsByName[t.name] = totals[t.id]);
+
+  rounds.push({
+    number: roundNumber,
+    venues: JSON.parse(JSON.stringify(venues)),
+    teamsSnapshot: teams.map(t => ({id:t.id, name:t.name, strengths:[...t.strengths]})),
+    totalsByName: totalsByName
+  });
+
+  currentRoundClosed = true;
+  viewingRoundIndex = rounds.length - 1;
+
+  renderRoundTabs();
+  renderCumulative();
+  showRound(viewingRoundIndex);
+}
+
+function renderRoundTabs(){
+  const container = document.getElementById('roundTabsContainer');
+  if(rounds.length === 0){ container.innerHTML=''; return; }
+  let html = '<div class="round-tabs">';
+  rounds.forEach((r, idx)=>{
+    const active = (idx === viewingRoundIndex) ? 'active' : '';
+    html += `<div class="round-tab ${active}" onclick="showRound(${idx})">Forduló ${r.number}</div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function showRound(idx){
+  viewingRoundIndex = idx;
+  renderRoundTabs();
+  const r = rounds[idx];
+  const resultsDiv = document.getElementById('results');
+  resultsDiv.innerHTML = renderRoundResultTable(r.venues, r.teamsSnapshot, idsTotalsFromNames(r), `– Forduló ${r.number}`);
+}
+
+function idsTotalsFromNames(round){
+  const totals = {};
+  round.teamsSnapshot.forEach(t => totals[t.id] = round.totalsByName[t.name]);
+  return totals;
+}
+
+function renderCumulative(){
+  const panel = document.getElementById('cumulativePanel');
+  if(rounds.length === 0){ panel.innerHTML=''; return; }
+
+  // összegyűjtjük az összes csapat nevét, ami valaha szerepelt
+  const allNames = new Set();
+  rounds.forEach(r => r.teamsSnapshot.forEach(t => allNames.add(t.name)));
+
+  const cumulative = {};
+  allNames.forEach(n => cumulative[n] = 0);
+  rounds.forEach(r => {
+    allNames.forEach(n=>{
+      if(r.totalsByName.hasOwnProperty(n)) cumulative[n] += r.totalsByName[n];
+    });
+  });
+
+  const sortedNames = [...allNames];
+  const maxScore = sortedNames.length ? Math.max(...sortedNames.map(n=>cumulative[n])) : 0;
+
+  let html = `<div class="panel"><h2>Összesített állás <span class="cumulative-badge">(${rounds.length} forduló után)</span></h2><table><thead><tr><th>Helyezés</th><th>Csapat</th>`;
+  rounds.forEach(r => html += `<th>Forduló ${r.number}</th>`);
+  html += '<th>Összpontszám</th></tr></thead><tbody>';
+
+  sortedNames.forEach((name, idx)=>{
+    const isWinner = cumulative[name] === maxScore;
+    html += `<tr class="${isWinner ? 'winner-row' : ''}"><td>${idx+1}.</td><td>${name}</td>`;
+    rounds.forEach(r=>{
+      const val = r.totalsByName.hasOwnProperty(name) ? r.totalsByName[name] : '–';
+      html += `<td>${val}</td>`;
+    });
+    html += `<td class="total-cell">${cumulative[name]}</td></tr>`;
+  });
+  html += '</tbody></table></div>';
+  panel.innerHTML = html;
+}
+
+// init
+renderVenueTable();
+renderTeamHeader();
+addTeam();
+addTeam();
+</script>
+</body>
+</html>
